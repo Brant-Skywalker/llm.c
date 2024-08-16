@@ -247,7 +247,7 @@ endif
 .PHONY: all train_gpt2 test_gpt2 train_gpt2cu test_gpt2cu train_gpt2fp32cu test_gpt2fp32cu profile_gpt2cu
 
 # Add targets
-TARGETS = train_gpt2 test_gpt2
+TARGETS = train_gpt2 test_gpt2 train_gpt2_log
 
 # Conditional inclusion of CUDA targets
 ifeq ($(NVCC),)
