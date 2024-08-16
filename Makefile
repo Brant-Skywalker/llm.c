@@ -1,7 +1,9 @@
-CC = /opt/homebrew/opt/llvm@14/bin/clang
+CLANG_PATH = /opt/homebrew/opt/llvm@14/bin
+CC = $(CLANG_PATH)/clang
+CLANGPP = $(CLANG_PATH)/clang++
 ENZYME_PATH ?= /Users/scharfrichter/Enzyme/build/Enzyme/ClangEnzyme-14.dylib
 CFLAGS = -O3 -Wno-unused-result -Wno-ignored-pragmas -Wno-unknown-attributes
-CFLAGS += -ffast-math -fno-stack-protector -mllvm -enzyme-loose-types -fplugin=$(ENZYME_PATH) -lmpi -mllvm -attributor-max-iterations=128 -mllvm -capture-tracking-max-uses-to-explore=256 -ffast-math -mllvm -memdep-block-scan-limit=70000 -mllvm -dse-memoryssa-walklimit=70000 -mllvm -enzyme-inline
+CFLAGS += -ffast-math -fno-stack-protector -mllvm -enzyme-loose-types -fplugin=$(ENZYME_PATH) -mllvm -attributor-max-iterations=128 -mllvm -capture-tracking-max-uses-to-explore=256 -ffast-math -mllvm -memdep-block-scan-limit=70000 -mllvm -dse-memoryssa-walklimit=70000 -mllvm -enzyme-inline
 LDFLAGS =
 LDLIBS = -lm
 INCLUDES = -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
@@ -264,8 +266,8 @@ all: $(TARGETS)
 train_gpt2: train_gpt2.c
 	$(CC) $(CFLAGS) $(INCLUDES) $(LDFLAGS) $^ $(LDLIBS) $(OUTPUT_FILE)
 
-train_gpt2_log: train_gpt2.c
-	$(CC) -DLOGGING=1 $(CFLAGS) $(INCLUDES) $(LDFLAGS) $^ $(LDLIBS) $(OUTPUT_FILE)
+train_gpt2_log: train_gpt2.c fp-logger.c
+	$(CC) $(CFLAGS) -DLOGGING=1 $(INCLUDES) $(LDFLAGS) $^ $(LDLIBS) $(OUTPUT_FILE)
 
 test_gpt2: test_gpt2.c
 	$(CC) $(CFLAGS) $(INCLUDES) $(LDFLAGS) $^ $(LDLIBS) $(OUTPUT_FILE)

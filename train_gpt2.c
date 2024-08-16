@@ -1089,9 +1089,6 @@ int sample_mult(float* probabilities, int n, float coin) {
 // ----------------------------------------------------------------------------
 // main training loop
 int main() {
-#ifdef LOGGING
-   initializeLogger();
-#endif
 
     // build the GPT-2 model from a checkpoint
     GPT2 model;
@@ -1218,7 +1215,6 @@ int main() {
 
 #ifdef LOGGING
     printLogger();
-    destroyLogger();
 #endif
 
     // free
