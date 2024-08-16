@@ -1089,7 +1089,7 @@ int sample_mult(float* probabilities, int n, float coin) {
 // ----------------------------------------------------------------------------
 // main training loop
 int main() {
-#ifndef LOGGING
+#ifdef LOGGING
    initializeLogger();
 #endif
 
@@ -1216,7 +1216,7 @@ int main() {
         printf("step %d: train loss %f (took %f ms)\n", step, model.mean_loss, time_elapsed_s * 1000);
     }
 
-#ifndef LOGGING
+#ifdef LOGGING
     printLogger();
     destroyLogger();
 #endif
