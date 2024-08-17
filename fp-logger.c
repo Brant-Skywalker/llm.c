@@ -143,3 +143,12 @@ void printLogger() {
     printf("\tGrad = %e\n", info->grad);
   }
 }
+
+void enzymeLogError(const char *id, double err) { updateError(id, err); }
+
+void enzymeLogGrad(const char *id, double grad) { updateGrad(id, grad); }
+
+void enzymeLogValue(const char *id, double res, unsigned numOperands,
+                    const double *operands) {
+  updateValue(id, res, numOperands, operands);
+}

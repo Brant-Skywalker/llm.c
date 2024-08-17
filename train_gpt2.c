@@ -39,7 +39,10 @@ int enzyme_out;
 int enzyme_const;
 
 void __enzyme_autodiff_gpt2_forward(void *, ...);
+void __enzyme_autodiff_gpt2_zero_grad(void *, ...);
 void __enzyme_autodiff_gpt2_backward(void *, ...);
+void __enzyme_autodiff_gpt2_update(void *, int, void *, void *, float, float,
+                                   float, float, float, int);
 #endif
 
 // ----------------------------------------------------------------------------
@@ -1092,10 +1095,11 @@ int main() {
 
     // build the GPT-2 model from a checkpoint
     GPT2 model;
+    gpt2_build_from_checkpoint(&model, "gpt2_124M.bin");
 #ifdef LOGGING
     GPT2 model_grad;
+    gpt2_build_from_checkpoint(&model_grad, "gpt2_124M.bin");
 #endif
-    gpt2_build_from_checkpoint(&model, "gpt2_124M.bin");
 
     // build the DataLoaders from tokens files. for now use tiny_shakespeare if available, else tiny_stories
     const char* tiny_stories_train = "dev/data/tinystories/TinyStories_train.bin";
@@ -1132,15 +1136,8 @@ int main() {
             dataloader_reset(&val_loader);
             for (int i = 0; i < val_num_batches; i++) {
                 dataloader_next_batch(&val_loader);
-#ifdef LOGGING
-                __enzyme_autodiff_gpt2_forward(
-                    (void *)gpt2_forward, enzyme_dup, &model, &model_grad,
-                    val_loader.inputs, val_loader.targets, (size_t)B,
-                    (size_t)T);
-#else
                 gpt2_forward(&model, val_loader.inputs, val_loader.targets, B,
                              T);
-#endif
                 val_loss += model.mean_loss;
             }
             val_loss /= val_num_batches;
@@ -1160,13 +1157,7 @@ int main() {
                 // we re-calculate the forward pass for all of (B,T) positions from scratch
                 // but the inference here is just for sanity checking anyway
                 // and we can maybe optimize a bit more later, with careful tests
-#ifdef LOGGING
-                __enzyme_autodiff_gpt2_forward((void *)gpt2_forward, enzyme_dup,
-                                               &model, &model_grad, gen_tokens,
-                                               NULL, (size_t)B, (size_t)T);
-#else
                 gpt2_forward(&model, gen_tokens, NULL, B, T);
-#endif
                 // furthermore, below we're only using b=0 (i.e. the first row) of all B rows
                 // we're in principle running B "inference streams" in parallel here
                 // but only using position 0
@@ -1195,19 +1186,22 @@ int main() {
         dataloader_next_batch(&train_loader);
 #ifdef LOGGING
         __enzyme_autodiff_gpt2_forward(
-            (void *)gpt2_forward, enzyme_dup, &model, &model_grad,
-            train_loader.inputs, train_loader.targets, (size_t)B, (size_t)T);
-#else
-        gpt2_forward(&model, train_loader.inputs, train_loader.targets, B, T);
-#endif
-        gpt2_zero_grad(&model);
-#ifdef LOGGING
+            (void *)gpt2_forward, enzyme_dup, &model, &model_grad, enzyme_const,
+            train_loader.inputs, enzyme_const, train_loader.targets, (size_t)B,
+            (size_t)T);
+        __enzyme_autodiff_gpt2_zero_grad((void *)gpt2_zero_grad, enzyme_dup,
+                                         &model, &model_grad);
         __enzyme_autodiff_gpt2_backward((void *)gpt2_backward, enzyme_dup,
                                         &model, &model_grad);
+        __enzyme_autodiff_gpt2_update((void *)gpt2_update, enzyme_dup, &model,
+                                      &model_grad, 1e-4f, 0.9f, 0.999f, 1e-8f,
+                                      0.0f, step + 1);
 #else
+        gpt2_forward(&model, train_loader.inputs, train_loader.targets, B, T);
+        gpt2_zero_grad(&model);
         gpt2_backward(&model);
-#endif
         gpt2_update(&model, 1e-4f, 0.9f, 0.999f, 1e-8f, 0.0f, step+1);
+#endif
         clock_gettime(CLOCK_MONOTONIC, &end);
         double time_elapsed_s = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
         printf("step %d: train loss %f (took %f ms)\n", step, model.mean_loss, time_elapsed_s * 1000);
@@ -1222,6 +1216,9 @@ int main() {
     dataloader_free(&val_loader);
     tokenizer_free(&tokenizer);
     gpt2_free(&model);
+#ifdef LOGGING
+    gpt2_free(&model_grad);
+#endif
     free(gen_tokens);
     return 0;
 }
